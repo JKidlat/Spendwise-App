@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Hashed password
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  expenses  Expense[]
+  categories Category[] // User can have custom categories
+  currency  String      @default("USD") // User's preferred currency
+
+  @@map("users")
+}
+
+// Category model for expense categorization
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  userId      String?  // null means it's a default category
+  isDefault   Boolean  @default(false)
+  color       String?  // Optional color for UI
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses    Expense[]
+
+  @@unique([name, userId]) // Unique category name per user
+  @@map("categories")
+}
+
+// Expense model for tracking expenses
+model Expense {
+  id          String   @id @default(cuid())
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([date])
+  @@index([categoryId])
+  @@map("expenses")
+}
+
+// Password reset token model for forgot password functionality
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
